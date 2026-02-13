@@ -1,0 +1,28 @@
+# Core dependencies
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+# Use pydantic 2.x with pre-built wheels (no Rust compilation needed)
+# If you encounter Rust errors, try: pip install --only-binary :all: pydantic
+pydantic>=2.0.0,<3.0.0
+pydantic-settings>=2.0.0
+sqlalchemy>=2.0.0
+
+# Database
+# SQLite is included with Python
+# For PostgreSQL in production: psycopg2-binary==2.9.9
+
+# Data processing
+python-dotenv==1.0.0
+requests==2.31.0
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# Logging
+loguru==0.7.2
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+flake8==6.1.0
+
