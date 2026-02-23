@@ -45,3 +45,7 @@ def init_db():
     print(f"Database initialized at {settings.DATABASE_URL}")
 
 
+
+
+
+

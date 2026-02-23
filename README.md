@@ -154,6 +154,10 @@ Once the API is running, visit:
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - ReDoc: `http://127.0.0.1:8000/redoc`
 
+### Data Update Guide
+
+For detailed instructions on updating data (OpenParlamento and WebTV), see [docs/DATA_UPDATE_GUIDE.md](docs/DATA_UPDATE_GUIDE.md).
+
 ## Data Models
 
 ### Person

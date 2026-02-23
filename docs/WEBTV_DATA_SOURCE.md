@@ -81,3 +81,7 @@ Session numbers are sequential but not always consecutive:
 4. **Error handling**: Better handling of missing/invalid sessions
 5. **Senato support**: Add support for Senate sessions (different URL pattern)
 
+
+
+
+

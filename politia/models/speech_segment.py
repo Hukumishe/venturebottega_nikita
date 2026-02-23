@@ -32,3 +32,7 @@ class SpeechSegment(Base):
         return f"<SpeechSegment(speech_id={self.speech_id}, speaker_id={self.speaker_id}, text_length={len(self.text) if self.text else 0})>"
 
 
+
+
+
+
