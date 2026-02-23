@@ -21,3 +21,7 @@ class Topic(Base):
         return f"<Topic(topic_id={self.topic_id}, title={self.title[:50]}...)>"
 
 
+
+
+
+

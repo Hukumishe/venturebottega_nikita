@@ -103,3 +103,7 @@ class APIClient:
             logger.error(f"Error getting person speeches: {e}")
             return []
 
+
+
+
+

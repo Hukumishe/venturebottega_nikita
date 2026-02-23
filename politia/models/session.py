@@ -26,3 +26,7 @@ class Session(Base):
         return f"<Session(session_id={self.session_id}, date={self.date}, chamber={self.chamber})>"
 
 
+
+
+
+

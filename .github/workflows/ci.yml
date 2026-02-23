@@ -35,3 +35,7 @@ jobs:
           python -c "import politia; print('Import successful')"
           python test_installation.py
 
+
+
+
+

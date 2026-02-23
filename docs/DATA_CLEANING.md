@@ -216,3 +216,7 @@ The system is designed to be resilient:
 - Proper error recovery
 - Data preservation (unknown speakers)
 
+
+
+
+

@@ -36,3 +36,7 @@ echo   python scripts/run_pipeline.py  - to process data
 echo   python scripts/run_api.py        - to start the API server
 
 
+
+
+
+

@@ -122,21 +122,36 @@ class WebTVFetcher:
             logger.error(f"Error parsing session {session_number}: {e}")
             return None
     
-    def fetch_session_range(self, start: int, end: int) -> int:
+    def fetch_session_range(self, start: int, end: int, skip_existing: bool = True) -> int:
         """
         Fetch multiple sessions in a range
         
         Args:
             start: Starting session number
             end: Ending session number (inclusive)
+            skip_existing: If True, skip sessions that already have files
             
         Returns:
             Number of sessions successfully fetched
         """
         logger.info(f"Fetching sessions {start} to {end}...")
         
+        # Get existing sessions if we should skip them
+        existing_sessions = set()
+        if skip_existing:
+            existing_sessions = set(self.get_existing_sessions())
+            skipped = [s for s in range(start, end + 1) if s in existing_sessions]
+            if skipped:
+                logger.info(f"Skipping {len(skipped)} existing sessions: {skipped[:10]}{'...' if len(skipped) > 10 else ''}")
+        
         count = 0
+        skipped_count = 0
         for session_num in range(start, end + 1):
+            # Skip if already exists
+            if skip_existing and session_num in existing_sessions:
+                skipped_count += 1
+                continue
+            
             session_data = self.fetch_session(session_num)
             
             if session_data:
@@ -158,7 +173,8 @@ class WebTVFetcher:
             if session_num < end:
                 sleep(self.rate_limit_delay)
         
-        logger.info(f"Fetched {count} sessions out of {end - start + 1} attempted")
+        total_attempted = end - start + 1
+        logger.info(f"Fetched {count} new sessions, skipped {skipped_count} existing, out of {total_attempted} attempted")
         return count
     
     def _build_session_url(self, session_number: int) -> str:
@@ -235,4 +251,114 @@ class WebTVFetcher:
             return response.status_code == 200
         except:
             return False
+    
+    def get_existing_sessions(self) -> List[int]:
+        """
+        Get list of session numbers that already have files
+        
+        Returns:
+            List of session numbers that exist as files
+        """
+        if not self.output_path.exists():
+            return []
+        
+        existing = []
+        for file_path in self.output_path.glob(f"{self.legislature}__*.json"):
+            try:
+                # Extract session number from filename (e.g., "19__347.json" -> 347)
+                parts = file_path.stem.split('__')
+                if len(parts) == 2 and parts[0] == str(self.legislature):
+                    session_num = int(parts[1])
+                    existing.append(session_num)
+            except (ValueError, IndexError):
+                continue
+        
+        return sorted(existing)
+    
+    def get_last_session_number(self) -> Optional[int]:
+        """
+        Get the highest session number that has been fetched
+        
+        Returns:
+            Highest session number, or None if no sessions exist
+        """
+        existing = self.get_existing_sessions()
+        return max(existing) if existing else None
+    
+    def fetch_incremental(self, max_sessions: Optional[int] = None, max_attempts: int = 100) -> int:
+        """
+        Fetch only new sessions incrementally (starting from last fetched session)
+        
+        Args:
+            max_sessions: Maximum number of new sessions to fetch (None = unlimited)
+            max_attempts: Maximum number of consecutive missing sessions before stopping
+            
+        Returns:
+            Number of sessions successfully fetched
+        """
+        # Get last fetched session number
+        last_session = self.get_last_session_number()
+        
+        if last_session is None:
+            logger.warning("No existing sessions found. Use fetch_session_range() for initial fetch.")
+            return 0
+        
+        start_session = last_session + 1
+        logger.info(f"Last fetched session: {last_session}")
+        logger.info(f"Starting incremental fetch from session {start_session}...")
+        
+        # Try to find the end by checking consecutive sessions
+        # Stop after max_attempts consecutive missing sessions
+        end_session = start_session
+        consecutive_missing = 0
+        
+        for session_num in range(start_session, start_session + max_attempts):
+            if self.check_session_exists(session_num):
+                end_session = session_num
+                consecutive_missing = 0
+            else:
+                consecutive_missing += 1
+                if consecutive_missing >= 5:  # Stop after 5 consecutive missing
+                    break
+        
+        if end_session < start_session:
+            logger.info("No new sessions found")
+            return 0
+        
+        # Limit by max_sessions if specified
+        if max_sessions:
+            end_session = min(end_session, start_session + max_sessions - 1)
+        
+        logger.info(f"Fetching sessions {start_session} to {end_session}...")
+        return self.fetch_session_range(start_session, end_session)
+    
+    def fetch_session_range_smart(self, start: Optional[int] = None, end: Optional[int] = None, 
+                                   incremental: bool = True, max_sessions: Optional[int] = None) -> int:
+        """
+        Smart fetch that can work incrementally or with manual range
+        
+        Args:
+            start: Starting session number (if None, uses incremental mode)
+            end: Ending session number (if None and incremental=False, uses max_attempts)
+            incremental: If True and start=None, fetches only new sessions
+            max_sessions: Maximum sessions to fetch in incremental mode
+            
+        Returns:
+            Number of sessions successfully fetched
+        """
+        if incremental and start is None:
+            # Incremental mode: fetch only new sessions
+            return self.fetch_incremental(max_sessions=max_sessions)
+        elif start is not None:
+            # Manual range mode
+            if end is None:
+                # If end not specified, try to find it automatically
+                end = start + 100  # Default to checking next 100 sessions
+                logger.info(f"End session not specified, checking up to {end}")
+            return self.fetch_session_range(start, end)
+        else:
+            logger.error("Either specify start session or use incremental=True")
+            return 0
+
+
 
