@@ -77,19 +77,26 @@ API_PORT=8000
 
 If you don't create a `.env` file, the system will try to auto-detect data paths.
 
-### 3. Fetch Fresh Data (Optional)
+### 3. Refresh Data (CLI)
 
-To fetch fresh data from OpenParlamento API:
+The standard way to refresh data sources is the **politia-engine** CLI (after `pip install -e .`):
 
 ```bash
-python scripts/fetch_openparlamento.py
+# Refresh politicians (OpenParlamento) — full refresh
+politia-engine refresh --source politicians
+
+# Refresh WebTV (Camera transcripts) — 100 most recent meetings by default
+politia-engine refresh --source webtv
+
+# WebTV: specific range or single meeting
+politia-engine refresh --source webtv --from-meeting 450 --to-meeting 600
+politia-engine refresh --source webtv --from-meeting 450   # from 450 to latest
+politia-engine refresh --source webtv --to-meeting 450     # single meeting
 ```
 
-This will:
-- Fetch all persons from the OpenParlamento API
-- Save to database
-- Optionally save to JSON files as backup
-- Respects rate limiting (3 seconds between requests)
+See [docs/CLI_GUIDE.md](docs/CLI_GUIDE.md) for all options and edge cases.
+
+Legacy scripts (optional): `python scripts/fetch_openparlamento.py`, `python scripts/fetch_webtv.py`.
 
 ### 4. Initialize Database and Run Pipeline
 

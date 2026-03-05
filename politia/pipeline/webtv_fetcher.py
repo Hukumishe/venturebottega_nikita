@@ -26,7 +26,7 @@ class WebTVFetcher:
         legislature: int = 19,
         save_to_files: bool = True,
         output_path: Optional[Path] = None,
-        rate_limit_delay: float = 5.0,
+        rate_limit_delay: float = 1.5,
     ):
         """
         Initialize WebTV fetcher
@@ -58,8 +58,8 @@ class WebTVFetcher:
         url = self._build_session_url(session_number)
         
         try:
-            logger.info(f"Fetching session {session_number}...")
-            response = requests.get(url, timeout=30)
+            logger.debug(f"Fetching session {session_number}...")
+            response = requests.get(url, timeout=15)
             response.raise_for_status()
             
             # Parse XML
@@ -146,33 +146,31 @@ class WebTVFetcher:
         
         count = 0
         skipped_count = 0
-        for session_num in range(start, end + 1):
+        total_attempted = end - start + 1
+        for idx, session_num in enumerate(range(start, end + 1), 1):
             # Skip if already exists
             if skip_existing and session_num in existing_sessions:
                 skipped_count += 1
                 continue
-            
+
+            logger.info(f"Session {session_num} ({idx}/{total_attempted}) — fetching...")
             session_data = self.fetch_session(session_num)
-            
+
             if session_data:
                 # Save to file
                 if self.save_to_files:
                     filename = f"{session_data['legislature']}__{session_data['session_number']}.json"
                     file_path = self.output_path / filename
-                    
                     with open(file_path, 'w', encoding='utf-8') as f:
                         json.dump(session_data, f, ensure_ascii=False, indent=2)
-                    
-                    logger.info(f"Saved session {session_num} to {file_path}")
-                
+                    logger.info(f"Session {session_num} — saved to {file_path.name} ({count + 1} new so far)")
                 count += 1
             else:
-                logger.debug(f"Session {session_num} not found or empty")
-            
+                logger.warning(f"Session {session_num} — not found or empty, skipping")
             # Rate limiting
             if session_num < end:
                 sleep(self.rate_limit_delay)
-        
+
         total_attempted = end - start + 1
         logger.info(f"Fetched {count} new sessions, skipped {skipped_count} existing, out of {total_attempted} attempted")
         return count
@@ -247,9 +245,9 @@ class WebTVFetcher:
         """
         url = self._build_session_url(session_number)
         try:
-            response = requests.head(url, timeout=10, allow_redirects=True)
+            response = requests.head(url, timeout=3, allow_redirects=True)
             return response.status_code == 200
-        except:
+        except Exception:
             return False
     
     def get_existing_sessions(self) -> List[int]:
@@ -278,12 +276,59 @@ class WebTVFetcher:
     def get_last_session_number(self) -> Optional[int]:
         """
         Get the highest session number that has been fetched
-        
+
         Returns:
             Highest session number, or None if no sessions exist
         """
         existing = self.get_existing_sessions()
         return max(existing) if existing else None
+
+    def discover_latest_session(
+        self,
+        probe_start: Optional[int] = None,
+        max_consecutive_missing: int = 5,
+        max_probe: int = 200,
+    ) -> Optional[int]:
+        """
+        Discover the highest session number that exists on the server by probing.
+
+        Args:
+            probe_start: First session number to probe. If None, uses last locally
+                stored session + 1, or 1 if no local sessions.
+            max_consecutive_missing: Stop after this many consecutive missing sessions.
+            max_probe: Maximum number of session numbers to probe.
+
+        Returns:
+            Highest session number found, or None if none exist in the probe range.
+        """
+        start = probe_start
+        if start is None:
+            last_local = self.get_last_session_number()
+            start = (last_local + 1) if last_local is not None else 1
+        logger.info(
+            f"Discovering latest session (probing from {start}, max {max_probe} attempts; "
+            f"will stop after 5 consecutive missing or at probe limit)"
+        )
+        latest = None
+        consecutive_missing = 0
+        for i in range(max_probe):
+            session_num = start + i
+            if self.check_session_exists(session_num):
+                latest = session_num
+                consecutive_missing = 0
+            else:
+                consecutive_missing += 1
+                if consecutive_missing >= max_consecutive_missing:
+                    logger.info(f"Stopped probing after {consecutive_missing} consecutive missing (last found: {latest})")
+                    break
+            if i > 0 and i % 10 == 0:
+                logger.info(f"Probing... checked up to session {session_num} (latest so far: {latest})")
+                sleep(0.2)  # light throttle for HEAD probes only
+        if latest is not None:
+            logger.info(f"Discovered latest session on server: {latest}")
+        elif start is not None:
+            logger.warning(f"Probe limit reached ({max_probe}); no session found in range [{start}, {start + max_probe - 1}]")
+        return latest
     
     def fetch_incremental(self, max_sessions: Optional[int] = None, max_attempts: int = 100) -> int:
         """

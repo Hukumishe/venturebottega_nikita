@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     
     # API fetching
     OPENPARLAMENTO_API_BASE: str = "https://service.opdm.openpolis.io/api-openparlamento/v1/19"
-    FETCH_RATE_LIMIT_DELAY: float = 3.0  # Seconds between API requests
+    FETCH_RATE_LIMIT_DELAY: float = 1.5  # Seconds between API requests (balance speed vs rate limits)
     
     # Source data paths (relative to project root or absolute)
     OPENPARLAMENTO_DATA_PATH: Optional[str] = None

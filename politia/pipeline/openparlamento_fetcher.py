@@ -28,7 +28,7 @@ class OpenParlamentoFetcher:
         db: Optional[Session] = None,
         save_to_files: bool = False,
         output_path: Optional[Path] = None,
-        rate_limit_delay: float = 3.0,
+        rate_limit_delay: float = 1.5,
     ):
         """
         Initialize fetcher
@@ -50,10 +50,10 @@ class OpenParlamentoFetcher:
     def fetch_all_persons(self, process_callback: Optional[Callable] = None) -> int:
         """
         Fetch all persons from the API
-        
+
         Args:
             process_callback: Optional callback function(person_data) to process each person
-            
+
         Returns:
             Number of persons fetched
         """
@@ -66,7 +66,7 @@ class OpenParlamentoFetcher:
         while page_url:
             try:
                 logger.info(f"Fetching page {page_num}...")
-                response = requests.get(page_url, timeout=30)
+                response = requests.get(page_url, timeout=20)
                 response.raise_for_status()
                 data = response.json()
                 
@@ -137,7 +137,7 @@ class OpenParlamentoFetcher:
             Person data dictionary or None if error
         """
         try:
-            response = requests.get(person_url, timeout=30)
+            response = requests.get(person_url, timeout=20)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -213,16 +213,16 @@ class OpenParlamentoFetcher:
     def fetch_person_by_id(self, person_id: int) -> Optional[Dict]:
         """
         Fetch a single person by their OpenParlamento ID
-        
+
         Args:
             person_id: OpenParlamento person ID
-            
+
         Returns:
             Person data dictionary or None if error
         """
         person_url = f"{self.PERSONS_LIST_URL}{person_id}/"
         return self._fetch_person_details(person_url)
-    
+
     def check_api_health(self) -> bool:
         """
         Check if the API is accessible
@@ -231,7 +231,7 @@ class OpenParlamentoFetcher:
             True if API is accessible, False otherwise
         """
         try:
-            response = requests.get(self.PERSONS_LIST_URL, params={"page": 1}, timeout=10)
+            response = requests.get(self.PERSONS_LIST_URL, params={"page": 1}, timeout=8)
             response.raise_for_status()
             return True
         except Exception as e:

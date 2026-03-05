@@ -22,6 +22,11 @@ setup(
         "loguru>=0.7.2",
     ],
     python_requires=">=3.8",
+    entry_points={
+        "console_scripts": [
+            "politia-engine=politia.cli:main",
+        ],
+    },
 )
 
 
